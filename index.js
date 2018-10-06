@@ -1,23 +1,16 @@
 const ChangesReader = require('changesreader')
 const schema = require('./lib/schema.js')
 const sqldb = require('./lib/db.js')
+const ProgressBar = require('progress');
 let nano
 
 const extractSequenceNumber = (seq) => {
   return parseInt(seq.replace(/-.*$/, ''))
 }
 
-const progressBar = (currentChange, maxChange, lastOne) => {
-  const percentDone = Math.floor(100 * (currentChange / maxChange))
-  const equals = Math.floor(percentDone / 5)
-  const dash = 20 - equals
-  const crlf = (lastOne) ? '\r' : '\n'
-  process.stdout.write(' [' + '='.repeat(equals) + '-'.repeat(dash) + '] ' + percentDone + '  ' + crlf)
-}
-
 const spoolChanges = async (opts, theSchema, maxChange) => {
-  let currentChange = 0
   let lastSeq
+  let bar = new ProgressBar('downloading [:bar] :percent :etas', { total: maxChange, width: 40 })
 
   return new Promise((resolve, reject) => {
     const changesReader = new ChangesReader(opts.database, nano.request)
@@ -25,16 +18,14 @@ const spoolChanges = async (opts, theSchema, maxChange) => {
       if (b.length > 0) {
         // get latest sequence token
         lastSeq = b[b.length - 1].seq
-        currentChange = extractSequenceNumber(lastSeq)
 
         // perform database operation
         await sqldb.insertBulk(opts.database, theSchema, b)
 
         // update the progress bar
-        progressBar(currentChange, maxChange)
+        bar.tick(b.length)
       }
     }).on('end', () => {
-      progressBar(currentChange, maxChange, true)
       console.log('changes feed monitoring has completed')
       console.log('Run the following command to query your database:')
       console.log('\n  $ sqlite3 couchwarehouse.sqlite\n')
