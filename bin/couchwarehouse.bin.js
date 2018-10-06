@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 // command-line args
-const url = process.env.COUCH_URL
+const url = process.env.COUCH_URL || 'http://localhost:5984'
 const db = process.env.COUCH_DATABASE
 const args = require('yargs')
   .option('url', { alias: 'u', describe: 'CouchDB URL', demandOption: !url, default: url })

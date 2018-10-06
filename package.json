@@ -24,6 +24,7 @@
   "homepage": "https://github.com/glynnbird/couchwarehouse#readme",
   "dependencies": {
     "changesreader": "^1.1.2",
+    "debug": "^4.0.1",
     "nano": "^7.1.0",
     "progress": "^2.0.0",
     "sqlite3": "^4.0.2",
