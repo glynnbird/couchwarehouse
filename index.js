@@ -6,18 +6,24 @@ const debug = require('debug')('couchwarehouse')
 let nano
 let cr
 
+// extract the sequence number from a token e.g 47-1abc2 --> 47
 const extractSequenceNumber = (seq) => {
   return parseInt(seq.replace(/-.*$/, ''))
 }
 
+// download a whole changes feed in one long HTTP request
 const spoolChanges = async (opts, theSchema, maxChange) => {
   let lastSeq
   let bar
+
+  // progress bar
   if (opts.verbose) {
     bar = new ProgressBar('downloading ' + opts.database + ' [:bar] :percent :etas', { total: maxChange, width: 30 })
   }
 
+  // return a Promise
   return new Promise((resolve, reject) => {
+    // start spooling changes
     const changesReader = new ChangesReader(opts.database, nano.request)
     changesReader.spool({ since: opts.since, includeDocs: true }).on('batch', async (b) => {
       if (b.length > 0) {
@@ -33,25 +39,36 @@ const spoolChanges = async (opts, theSchema, maxChange) => {
         }
       }
     }).on('end', () => {
+      // complete the progress bar
       if (opts.verbose) {
         bar.tick(bar.total - bar.curr)
       }
+
+      // pass back the last known sequence token
       resolve(lastSeq)
     }).on('error', reject)
   })
 }
 
+// monitor new changes using multiple "longpoll" HTTP requests
 const monitorChanges = async function (opts, theSchema, lastSeq) {
+  // return a Promise
   return new Promise((resolve, reject) => {
+    // start monitoring the changes fees
     cr = new ChangesReader(opts.database, nano.request)
     cr.start({ since: lastSeq, includeDocs: true }).on('batch', async (b) => {
-      process.stdout.write('.')
+      if (opts.verbose) {
+        process.stdout.write('.')
+      }
+
+      // insert the changes into the database
       await sqldb.insertBulk(opts.database, theSchema, b)
     }).on('error', reject)
     resolve()
   })
 }
 
+// tell the ChangesReader to stop
 const stop = () => {
   if (cr) {
     cr.stop()
@@ -59,7 +76,17 @@ const stop = () => {
   }
 }
 
+// start spooling and monitoring the changes feed
 const start = async (opts) => {
+  // override defaults
+  let defaults = {
+    url: 'http://localhost:5984',
+    since: '0',
+    verbose: false
+  }
+  opts = Object.assign(defaults, opts)
+
+  // setup nano
   nano = require('nano')(opts.url)
   let maxChange
 
@@ -78,6 +105,9 @@ const start = async (opts) => {
   // calculate the schema from the example docs
   debug('Calculating the schema')
   const theSchema = schema.discover(exampleDocs.rows)
+  if (!theSchema) {
+    throw new Error('Unable to infer the schema on database ' + opts.database)
+  }
   debug('schema', theSchema)
 
   // setup the local database
