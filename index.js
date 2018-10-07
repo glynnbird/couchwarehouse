@@ -4,6 +4,7 @@ const sqldb = require('./lib/db.js')
 const ProgressBar = require('progress')
 const debug = require('debug')('couchwarehouse')
 let nano
+let cr
 
 const extractSequenceNumber = (seq) => {
   return parseInt(seq.replace(/-.*$/, ''))
@@ -11,7 +12,10 @@ const extractSequenceNumber = (seq) => {
 
 const spoolChanges = async (opts, theSchema, maxChange) => {
   let lastSeq
-  let bar = new ProgressBar('downloading ' + opts.database + ' [:bar] :percent :etas', { total: maxChange, width: 30 })
+  let bar
+  if (opts.verbose) {
+    bar = new ProgressBar('downloading ' + opts.database + ' [:bar] :percent :etas', { total: maxChange, width: 30 })
+  }
 
   return new Promise((resolve, reject) => {
     const changesReader = new ChangesReader(opts.database, nano.request)
@@ -24,9 +28,14 @@ const spoolChanges = async (opts, theSchema, maxChange) => {
         await sqldb.insertBulk(opts.database, theSchema, b)
 
         // update the progress bar
-        bar.tick(b.length)
+        if (opts.verbose) {
+          bar.tick(b.length)
+        }
       }
     }).on('end', () => {
+      if (opts.verbose) {
+        bar.tick(bar.total - bar.curr)
+      }
       resolve(lastSeq)
     }).on('error', reject)
   })
@@ -34,12 +43,20 @@ const spoolChanges = async (opts, theSchema, maxChange) => {
 
 const monitorChanges = async function (opts, theSchema, lastSeq) {
   return new Promise((resolve, reject) => {
-    const changesReader = new ChangesReader(opts.database, nano.request)
-    changesReader.start({ since: lastSeq, includeDocs: true }).on('batch', async (b) => {
+    cr = new ChangesReader(opts.database, nano.request)
+    cr.start({ since: lastSeq, includeDocs: true }).on('batch', async (b) => {
       process.stdout.write('.')
       await sqldb.insertBulk(opts.database, theSchema, b)
     }).on('error', reject)
+    resolve()
   })
+}
+
+const stop = () => {
+  if (cr) {
+    cr.stop()
+    cr = null
+  }
 }
 
 const start = async (opts) => {
@@ -69,12 +86,14 @@ const start = async (opts) => {
 
   // spool changes
   debug('Spooling changes')
-  console.log('Run the following command to query your data warehouse:')
-  console.log('\n  $ sqlite3 couchwarehouse.sqlite\n')
-  console.log('Then in sqlite3, you can run queries e.g.:')
-  console.log('\n  sqlite3> SELECT * FROM ' + opts.database + ' LIMIT 10;\n')
-  console.log('Have fun!')
-  console.log('p.s Press ctrl-C to stop monitoring for further changes')
+  if (opts.verbose) {
+    console.log('Run the following command to query your data warehouse:')
+    console.log('\n  $ sqlite3 couchwarehouse.sqlite\n')
+    console.log('Then in sqlite3, you can run queries e.g.:')
+    console.log('\n  sqlite3> SELECT * FROM ' + opts.database + ' LIMIT 10;\n')
+    console.log('Have fun!')
+    console.log('p.s Press ctrl-C to stop monitoring for further changes')
+  }
   const lastSeq = await spoolChanges(opts, theSchema, maxChange)
 
   // monitor changes
@@ -82,5 +101,6 @@ const start = async (opts) => {
 }
 
 module.exports = {
-  start: start
+  start: start,
+  stop: stop
 }

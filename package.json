@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "standard": "standard --fix",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "standard; mocha --exit"
   },
   "repository": {
     "type": "git",
@@ -34,6 +34,13 @@
     "couchwarehouse": "bin/couchwarehouse.bin.js"
   },
   "devDependencies": {
+    "mocha": "^5.2.0",
+    "nock": "^10.0.0",
     "standard": "^12.0.1"
+  },
+  "standard": {
+    "env": [
+      "mocha"
+    ]
   }
 }

@@ -7,9 +7,11 @@ const args = require('yargs')
   .option('url', { alias: 'u', describe: 'CouchDB URL', default: url })
   .option('database', { alias: 'db', describe: 'CouchDB database name', demandOption: !db, default: db })
   .option('since', { alias: 's', describe: 'Last known CouchDB changes feed token', demandOption: false, default: '0' })
+  .option('verbose', { describe: 'Show instructions and progress in the output', default: true })
   .help('help')
   .argv
 
 const couchwarehouse = require('../')
 
+args.progress = true
 couchwarehouse.start(args)

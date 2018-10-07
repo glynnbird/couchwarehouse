@@ -1,0 +1,15 @@
+{
+  "_id": "{{kuuid 2018-10-01}}",
+  "name": "{{name}}",
+  "age": {{integer}},
+  "verified": {{boolean}},
+  "description": "{{words 10}}",
+  "address": {
+    "street": "{{street}},{{city}},{{state}},{{zip}}",
+    "location": {
+      "long": {{longitude}},
+      "lat": {{latitude}}
+    }
+  },
+  "tags": ["{{word}}","{{word}}","{{word}}"]
+}
