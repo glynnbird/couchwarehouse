@@ -128,5 +128,9 @@ Unwanted tables can be easily removed using the `sqlite3` prompt:
 sqlite> DROP TABLE mydb;
 ```
 
+The whole SQLite database can be removed by deleting the `couchwarehouse.sqlite` file 
+from your file system.
+
 ## What is this useful for?
 
+to do
