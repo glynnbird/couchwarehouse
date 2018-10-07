@@ -9,7 +9,7 @@
 
 ## Installation
 
-[Node.js and npm](https://nodejs.org/en/) are required:
+[Node.js version 8 or above and npm](https://nodejs.org/en/) are required:
 
 ```sh
 npm install -g couchwarehouse
