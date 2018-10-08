@@ -1,11 +1,15 @@
 # couchwarehouse
 
-*couchwarehouse* is a command-line tool that turns your [Apache CouchDB](http://couchdb.apache.org/) database(s) into a data warehouse. It works by:
+*couchwarehouse* is a command-line tool that turns your [Apache CouchDB](http://couchdb.apache.org/) database(s) into a local data warehouse. It works by:
 
-- discovering the "schema" of your CouchDB database
-- creating a new local [SQLite](https://www.sqlite.org/index.html) table to match the schema
-- downloading all the documents (except design documents) and inserting one row per document into SQLite
-- continuously monitoring CouchDB for new changes
+- discovering the "schema" of your CouchDB database.
+- creating a new local [SQLite](https://www.sqlite.org/index.html) table to match the schema.
+- downloading all the documents (except design documents) and inserting one row per document into SQLite.
+- continuously monitoring CouchDB for new documents, updates to existing documents and deletions.
+
+![](img/couchwarehouse.png)
+
+Once downloaded your database can be queried using SQL.
 
 ## Installation
 
@@ -40,7 +44,7 @@ Press "Ctrl-C" to exit.
 
 ## Accessing the data warehouse
 
-Simply run the `sqlite3` command-line tool which may be pre-installed on your computer, otherwise [download here](https://www.sqlite.org/download.html).
+In another terminal, simply run the `sqlite3` command-line tool (which may be pre-installed on your computer, otherwise [download here](https://www.sqlite.org/download.html)).
 
 ```sh
 $ sqlite3 couchwarehouse.sqlite
@@ -59,11 +63,7 @@ Pilar                   -9.59722    -35.95667   BR          30617.0
 Patos                   -7.02444    -37.28      BR          92575.0 
 ```
 
-SQLite has an [extensive query language](https://www.sqlite.org/lang.html) including aggregations, joins and much more. You could create warehouses on multiple CouchDB databases to create multiple SQLite tables and join them with queries!
-
-```sql
-SELECT country, SUM(population) FROM mydb GROUP BY 1 ORDER BY 2 DESC LIMIT 10;
-```
+SQLite has an [extensive query language](https://www.sqlite.org/lang.html) including aggregations, joins and much more. You may create warehouses from multiple CouchDB databases to create multiple SQLite tables and join them with queries!
 
 ## Command-line parameter reference
 
@@ -147,16 +147,13 @@ sqlite> DROP TABLE mydb;
 The whole SQLite database can be removed by deleting the `couchwarehouse.sqlite` file 
 from your file system.
 
-## What is this useful for?
-
-to do
-
 ## What's the catch?
 
 - you need enough memory and hard disk space to store the entire database on your machine
 - conflicted document bodies are ignored
 - objects are flattened
 - arrays are stored as their JSON representation
+- this approach is only suitable where each document in the database has the same schema. If you are storing different object types in the same database (e.g. `type: "Person", type: "Order"`), then consider using [Filtered Replication](http://docs.couchdb.org/en/stable/replication/intro.html) to separte the objects into their own database before using this tool
 
 ## Using programmatically
 
@@ -168,8 +165,7 @@ const couchwarehouse = require('couchwarehouse')
 // configuration
 const opts = {
   url: 'https://USER:PASS@host.cloudant.com',
-  database: 'mydb',
-  since: '0'
+  database: 'mydb'
 }
 
 const main = async () => {
@@ -182,4 +178,19 @@ const main = async () => {
   })
 }
 main()
+```
+
+The `opts` object passed to `couchwarehouse.start` can contain:
+
+- `url` - the URL of the CouchDB instance e.g. `http://localhost:5984`
+- `database` - the name of the CouchDB database to work with
+- `verbose` - whether to show progress on the terminal (default: true)
+- `reset` - reset the data. Delete existing data and start from scratch (default: false)
+
+## Debugging
+
+Starting *couchwarehouse* with the `DEBUG` environment variable set will produce extra output e.g.
+
+```sh
+DEBUG=* couchwarehouse --db mydb
 ```
