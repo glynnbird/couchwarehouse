@@ -19,6 +19,10 @@ describe('couchwarehouse', () => {
       const sql = 'DROP TABLE IF EXISTS sampledata'
       db.run(sql, err => {
         assert.strictEqual(err, null)
+      })
+      const sql2 = 'DELETE FROM couchwarehouse_checkpoints WHERE tablename="sampledata"'
+      db.run(sql2, err => {
+        if (err) { }
         done()
       })
     })
@@ -71,6 +75,11 @@ describe('couchwarehouse', () => {
     db.serialize(() => {
       const sql = 'DROP TABLE IF EXISTS sampledata'
       db.run(sql, err => {
+        assert.strictEqual(err, null)
+        done()
+      })
+      const sql2 = 'DELETE FROM couchwarehouse_checkpoints WHERE tablename="sampledata"'
+      db.run(sql2, err => {
         assert.strictEqual(err, null)
         done()
       })

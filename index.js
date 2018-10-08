@@ -13,7 +13,7 @@ const extractSequenceNumber = (seq) => {
 
 // download a whole changes feed in one long HTTP request
 const spoolChanges = async (opts, theSchema, maxChange) => {
-  let lastSeq
+  let lastSeq = opts.since
   let bar
 
   // progress bar
@@ -38,11 +38,14 @@ const spoolChanges = async (opts, theSchema, maxChange) => {
           bar.tick(b.length)
         }
       }
-    }).on('end', () => {
+    }).on('end', async () => {
       // complete the progress bar
       if (opts.verbose) {
         bar.tick(bar.total - bar.curr)
       }
+
+      // write checkpoint
+      await sqldb.writeCheckpoint(opts.database, lastSeq)
 
       // pass back the last known sequence token
       resolve(lastSeq)
@@ -63,6 +66,10 @@ const monitorChanges = async function (opts, theSchema, lastSeq) {
 
       // insert the changes into the database
       await sqldb.insertBulk(opts.database, theSchema, b)
+
+      // write a checkpoint
+      const latestSeq = b[b.length - 1].seq
+      await sqldb.writeCheckpoint(opts.database, latestSeq)
     }).on('error', reject)
     resolve()
   })
@@ -92,7 +99,7 @@ const start = async (opts) => {
 
   // get latest revision token of the target database, to
   // give us something to aim for
-  debug('Getting last change')
+  debug('Getting last change from CouchDB')
   const req = { db: opts.database, path: '_changes', qs: { since: 'now', limit: 1 } }
   const info = await nano.request(req)
   maxChange = extractSequenceNumber(info.last_seq)
@@ -113,6 +120,10 @@ const start = async (opts) => {
   // setup the local database
   debug('Setting up the local database')
   await sqldb.setup(opts.database, theSchema)
+
+  // seeing where we got to last time
+  const lastTime = await sqldb.getCheckpoint(opts.database)
+  opts.since = lastTime || '0'
 
   // spool changes
   debug('Spooling changes')

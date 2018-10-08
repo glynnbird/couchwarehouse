@@ -134,3 +134,34 @@ from your file system.
 ## What is this useful for?
 
 to do
+
+## What's the catch?
+
+- you need enough memory and hard disk space to store the entire database on your machine
+- conflicted document bodies are ignored
+
+## Using programmatically
+
+This library can be used programmatically too:
+
+```js
+const couchwarehouse = require('couchwarehouse')
+
+// configuration
+const opts = {
+  url: 'https://USER:PASS@host.cloudant.com',
+  database: 'mydb',
+  since: '0'
+}
+
+const main = async () => {
+  // start downloading data - wait until changes feed is complete
+  await couchwarehouse.start(opts)
+
+  // query the database
+  couchwarehouse.query('SELECT * FROM mydb').then((data) => {
+    console.log(data)
+  })
+}
+main()
+```
