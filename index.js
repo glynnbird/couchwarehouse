@@ -89,7 +89,8 @@ const start = async (opts) => {
   let defaults = {
     url: 'http://localhost:5984',
     since: '0',
-    verbose: false
+    verbose: false,
+    reset: false
   }
   opts = Object.assign(defaults, opts)
 
@@ -115,15 +116,17 @@ const start = async (opts) => {
   if (!theSchema) {
     throw new Error('Unable to infer the schema on database ' + opts.database)
   }
-  debug('schema', theSchema)
+  debug('schema', JSON.stringify(theSchema))
 
   // setup the local database
   debug('Setting up the local database')
-  await sqldb.setup(opts.database, theSchema)
+  await sqldb.setup(opts.database, theSchema, opts.reset)
 
   // seeing where we got to last time
-  const lastTime = await sqldb.getCheckpoint(opts.database)
-  opts.since = lastTime || '0'
+  if (!opts.reset) {
+    const lastTime = await sqldb.getCheckpoint(opts.database)
+    opts.since = lastTime || '0'
+  }
 
   // spool changes
   debug('Spooling changes')

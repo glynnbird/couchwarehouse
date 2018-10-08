@@ -65,6 +65,22 @@ SQLite has an [extensive query language](https://www.sqlite.org/lang.html) inclu
 SELECT country, SUM(population) FROM mydb GROUP BY 1 ORDER BY 2 DESC LIMIT 10;
 ```
 
+## Command-line parameter reference
+
+- `--url`/`-u` - the URL of the CouchDB instance e.g. `http://localhost:5984`
+- `--database`/`--db`/`-d` - the name of the CouchDB database to work with
+- `--verbose` - whether to show progress on the terminal (default: true)
+- `--reset`/`-r` - reset the data. Delete existing data and start from scratch (default: false)
+- `--version` - show version number
+- `--help` - show help
+
+The CouchDB URL can also be specified with the `COUCH_URL` environment variable e.g.
+
+```sh
+export COUCH_URL="https://USER:PASS@host.cloudant.com"
+couchwarehouse --db mydb
+```
+
 ## Schema discovery
 
 CouchDB is a JSON document store and as such, the database does not have a fixed schema. The *couchwarehouse* utility takes a look at a handful of documents and *infers* a schema from what it sees. This is clearly only of use if your CouchDB documents that have similar documents.
@@ -139,6 +155,8 @@ to do
 
 - you need enough memory and hard disk space to store the entire database on your machine
 - conflicted document bodies are ignored
+- objects are flattened
+- arrays are stored as their JSON representation
 
 ## Using programmatically
 
