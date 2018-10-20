@@ -38,7 +38,7 @@ p.s Press ctrl-C to stop monitoring for further changes
 downloading mydb [======------------------------] 20% 27.7s
 ```
 
-After downloading is complete, *couchwarehouse* will continuously poll the target database for any changes and update the database accordingly. 
+After downloading is complete, *couchwarehouse* will continuously poll the source database for any changes and update the local database accordingly. 
 
 Press "Ctrl-C" to exit.
 
