@@ -1,3 +1,4 @@
+const path = require('path')
 const ChangesReader = require('changesreader')
 const schema = require('./lib/schema.js')
 const sqldb = require('./lib/db.js')
@@ -29,6 +30,13 @@ const spoolChanges = async (opts, theSchema, maxChange) => {
       if (b.length > 0) {
         // get latest sequence token
         lastSeq = b[b.length - 1].seq
+
+        // apply transform
+        if (typeof opts.transform === 'function') {
+          for (var i in b) {
+            b[i].doc = opts.transform.apply(null, [b[i].doc])
+          }
+        }
 
         // perform database operation
         await sqldb.insertBulk(opts.database, theSchema, b)
@@ -64,6 +72,13 @@ const monitorChanges = async function (opts, theSchema, lastSeq) {
         process.stdout.write('.')
       }
 
+      // apply transform
+      if (typeof opts.transform === 'function') {
+        for (var i in b) {
+          b[i].doc = opts.transform.apply(null, [b[i].doc])
+        }
+      }
+
       // insert the changes into the database
       await sqldb.insertBulk(opts.database, theSchema, b)
 
@@ -90,9 +105,15 @@ const start = async (opts) => {
     url: 'http://localhost:5984',
     since: '0',
     verbose: false,
-    reset: false
+    reset: false,
+    transform: null
   }
   opts = Object.assign(defaults, opts)
+
+  // if transform is present
+  if (opts.transform) {
+    opts.transform = require(path.resolve(process.cwd(), opts.transform))
+  }
 
   // setup nano
   nano = require('nano')(opts.url)
@@ -109,6 +130,11 @@ const start = async (opts) => {
   debug('Getting docs for schema discovery')
   const db = nano.db.use(opts.database)
   const exampleDocs = await db.list({ limit: 50, include_docs: true })
+  if (typeof opts.transform === 'function') {
+    for (var i in exampleDocs.rows) {
+      exampleDocs.rows[i].doc = opts.transform.apply(null, [exampleDocs.rows[i].doc])
+    }
+  }
 
   // calculate the schema from the example docs
   debug('Calculating the schema')
