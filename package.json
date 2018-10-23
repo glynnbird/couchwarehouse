@@ -1,6 +1,6 @@
 {
   "name": "couchwarehouse",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Data Warehouse PoC for CouchDB",
   "main": "index.js",
   "scripts": {
@@ -24,10 +24,10 @@
   "homepage": "https://github.com/glynnbird/couchwarehouse#readme",
   "dependencies": {
     "changesreader": "^1.1.2",
-    "debug": "^4.0.1",
+    "debug": "^4.1.0",
     "nano": "^7.1.0",
-    "progress": "^2.0.0",
-    "sqlite3": "^4.0.2",
+    "progress": "^2.0.1",
+    "sqlite3": "^4.0.3",
     "yargs": "^12.0.2"
   },
   "bin": {
@@ -35,7 +35,7 @@
   },
   "devDependencies": {
     "mocha": "^5.2.0",
-    "nock": "^10.0.0",
+    "nock": "^10.0.1",
     "standard": "^12.0.1"
   },
   "standard": {
