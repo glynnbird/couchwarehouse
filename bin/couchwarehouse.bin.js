@@ -8,6 +8,7 @@ const args = require('yargs')
   .option('database', { alias: ['db', 'd'], describe: 'CouchDB database name', demandOption: !db, default: db })
   .option('verbose', { describe: 'Show instructions and progress in the output', default: true })
   .option('reset', { alias: 'r', describe: 'Ignore previously downloaded data and start again', default: false })
+  .option('transform', { alias: 't', describe: 'path to a JavaScript transformation function', default: process.env.COUCH_TRANSFORM ? process.env.COUCH_TRANSFORM : null })
   .help('help')
   .argv
 

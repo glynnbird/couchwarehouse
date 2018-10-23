@@ -71,6 +71,7 @@ SQLite has an [extensive query language](https://www.sqlite.org/lang.html) inclu
 - `--database`/`--db`/`-d` - the name of the CouchDB database to work with
 - `--verbose` - whether to show progress on the terminal (default: true)
 - `--reset`/`-r` - reset the data. Delete existing data and start from scratch (default: false)
+- `--transform`/`-t` - transform each document with a supplied JavaScript function (default: null)
 - `--version` - show version number
 - `--help` - show help
 
@@ -79,6 +80,41 @@ The CouchDB URL can also be specified with the `COUCH_URL` environment variable 
 ```sh
 export COUCH_URL="https://USER:PASS@host.cloudant.com"
 couchwarehouse --db mydb
+```
+
+## Transforming documents
+
+If you need to format the data prior to it being stored in the SQLite database, you may optionally supply
+a JavaScript transformation function with the `--transform`/`-t` parameter.
+
+Create a JavaScript file, in this case called `transform.js`:
+
+```js
+const f = (doc) => {
+  // remove the basket array
+  delete doc.basket
+
+  // trim whitespace from the category
+  doc.category = doc.category.trim()
+  
+  // combine the title/firstname/surname into one field
+  doc.name = [doc.title, doc.firstname, doc.surname].join(' ') 
+  delete doc.title
+  delete doc.firstname
+  delete doc.surname
+
+  // return the transformed document
+  return doc
+}
+
+// export the function
+module.exports = f
+```
+
+Then instruct *couchwarehouse* to use the function:
+
+```sh
+couchwarehouse --db mydb --transform './transform.js' --reset true
 ```
 
 ## Schema discovery
