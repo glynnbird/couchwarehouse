@@ -12,6 +12,42 @@ const extractSequenceNumber = (seq) => {
   return parseInt(seq.replace(/-.*$/, ''))
 }
 
+// apply user-supplied JavaScript transform and look out for
+// new schemas in the incoming documents
+const transformAndDiscoverSchema = (b, opts, theSchema) => {
+  // for each document in the batch
+  for (let i in b) {
+    // apply transform function
+    if (typeof opts.transform === 'function') {
+      b[i].doc = opts.transform.apply(null, [b[i].doc])
+    }
+
+    // calculate its document type
+    const docType = '_default'
+
+    // array of SQL statements
+    let createSQL = []
+
+    // if not a design doc and not a document type we've seen before
+    if (!b[i].doc._id.match(/^_design/) && !theSchema[docType]) {
+      // clone the doc
+      const doc = JSON.parse(JSON.stringify(b[i].doc))
+
+      // discover the schema
+      debug('Calculating the schema for ' + docType)
+      const s = schema.discover(doc)
+      theSchema[docType] = s
+      debug('schema', JSON.stringify(s))
+
+      // create the database
+      debug('Calculating Create SQL for ' + docType)
+      createSQL = createSQL.concat(sqldb.generateCreateTableSQL(opts.database, s, opts.reset))
+    }
+
+    return createSQL
+  }
+}
+
 // download a whole changes feed in one long HTTP request
 const spoolChanges = async (opts, theSchema, maxChange) => {
   let lastSeq = opts.since
@@ -31,15 +67,11 @@ const spoolChanges = async (opts, theSchema, maxChange) => {
         // get latest sequence token
         lastSeq = b[b.length - 1].seq
 
-        // apply transform
-        if (typeof opts.transform === 'function') {
-          for (var i in b) {
-            b[i].doc = opts.transform.apply(null, [b[i].doc])
-          }
-        }
+        // transform and get any new schema SQL statements
+        const createSQL = transformAndDiscoverSchema(b, opts, theSchema)
 
         // perform database operation
-        await sqldb.insertBulk(opts.database, theSchema, b)
+        await sqldb.insertBulk(createSQL, opts.database, theSchema, b)
 
         // update the progress bar
         if (opts.verbose) {
@@ -72,15 +104,11 @@ const monitorChanges = async function (opts, theSchema, lastSeq) {
         process.stdout.write('.')
       }
 
-      // apply transform
-      if (typeof opts.transform === 'function') {
-        for (var i in b) {
-          b[i].doc = opts.transform.apply(null, [b[i].doc])
-        }
-      }
+      // transform and discover schema of incoming documents
+      const createSQL = transformAndDiscoverSchema(b, opts, theSchema)
 
-      // insert the changes into the database
-      await sqldb.insertBulk(opts.database, theSchema, b)
+      // perform database operation
+      await sqldb.insertBulk(createSQL, opts.database, theSchema, b)
 
       // write a checkpoint
       const latestSeq = b[b.length - 1].seq
@@ -101,6 +129,7 @@ const stop = () => {
 // start spooling and monitoring the changes feed
 const start = async (opts) => {
   // override defaults
+  const theSchema = {}
   let defaults = {
     url: 'http://localhost:5984',
     since: '0',
@@ -125,7 +154,7 @@ const start = async (opts) => {
   const req = { db: opts.database, path: '_changes', qs: { since: 'now', limit: 1 } }
   const info = await nano.request(req)
   maxChange = extractSequenceNumber(info.last_seq)
-
+  /*
   // get 50 documents from the database for schema discovery
   debug('Getting docs for schema discovery')
   const db = nano.db.use(opts.database)
@@ -147,6 +176,10 @@ const start = async (opts) => {
   // setup the local database
   debug('Setting up the local database')
   await sqldb.setup(opts.database, theSchema, opts.reset)
+*/
+  // initialse SQLite
+  debug('Initalise SQLite')
+  await sqldb.initialise(opts.reset)
 
   // seeing where we got to last time
   if (!opts.reset) {

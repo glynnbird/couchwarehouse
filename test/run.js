@@ -31,13 +31,9 @@ describe('couchwarehouse', () => {
   // consume changes feed
   it('should turn a changes feed into a database', async () => {
     // create mocks
-    const samplealldocs = require('./samplealldocs.json')
     const n = nock('http://localhost:5984')
     n.get('/sampledata/_changes?since=now&limit=1')
       .reply(200, { results: [], last_seq: '104-g1AAAA', pending: 0 })
-      .get('/sampledata/_all_docs')
-      .query({ include_docs: true, limit: 50 })
-      .reply(200, samplealldocs)
       .get('/sampledata/_changes')
       .query({ include_docs: true, since: '0' })
       .replyWithFile(200, path.join(__dirname, 'samplechanges.txt'), { 'Content-Type': 'application/json' })
