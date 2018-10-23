@@ -72,7 +72,6 @@ describe('couchwarehouse', () => {
       const sql = 'DROP TABLE IF EXISTS sampledata'
       db.run(sql, err => {
         assert.strictEqual(err, null)
-        done()
       })
       const sql2 = 'DELETE FROM couchwarehouse_checkpoints WHERE tablename="sampledata"'
       db.run(sql2, err => {
