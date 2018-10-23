@@ -12,6 +12,45 @@ const extractSequenceNumber = (seq) => {
   return parseInt(seq.replace(/-.*$/, ''))
 }
 
+// apply user-supplied JavaScript transform and look out for
+// new schemas in the incoming documents
+const transformAndDiscoverSchema = (b, opts, theSchema) => {
+  // array of SQL statements
+  let createSQL = []
+
+  // for each document in the batch
+  for (let i in b) {
+    // the document we're working with
+    let doc = b[i].doc
+
+    // apply transform function
+    if (typeof opts.transform === 'function') {
+      doc = opts.transform.apply(null, [doc])
+    }
+
+    // calculate its document type
+    const docType = opts.split ? doc[opts.split] : '_default'
+
+    // if not a design doc and not a document type we've seen before
+    if (!doc._id.match(/^_design/) && !theSchema[docType]) {
+      // clone the doc
+      doc = JSON.parse(JSON.stringify(doc))
+
+      // discover the schema
+      debug('Calculating the schema for ' + docType)
+      const s = schema.discover(doc)
+      theSchema[docType] = s
+      debug('schema', JSON.stringify(s))
+
+      // create the database
+      debug('Calculating Create SQL for ' + docType)
+      createSQL = createSQL.concat(sqldb.generateCreateTableSQL(opts, docType, opts.database, s, opts.reset))
+    }
+  }
+
+  return createSQL
+}
+
 // download a whole changes feed in one long HTTP request
 const spoolChanges = async (opts, theSchema, maxChange) => {
   let lastSeq = opts.since
@@ -31,15 +70,11 @@ const spoolChanges = async (opts, theSchema, maxChange) => {
         // get latest sequence token
         lastSeq = b[b.length - 1].seq
 
-        // apply transform
-        if (typeof opts.transform === 'function') {
-          for (var i in b) {
-            b[i].doc = opts.transform.apply(null, [b[i].doc])
-          }
-        }
+        // transform and get any new schema SQL statements
+        const createSQL = transformAndDiscoverSchema(b, opts, theSchema)
 
         // perform database operation
-        await sqldb.insertBulk(opts.database, theSchema, b)
+        await sqldb.insertBulk(opts, createSQL, opts.database, theSchema, b)
 
         // update the progress bar
         if (opts.verbose) {
@@ -72,15 +107,11 @@ const monitorChanges = async function (opts, theSchema, lastSeq) {
         process.stdout.write('.')
       }
 
-      // apply transform
-      if (typeof opts.transform === 'function') {
-        for (var i in b) {
-          b[i].doc = opts.transform.apply(null, [b[i].doc])
-        }
-      }
+      // transform and discover schema of incoming documents
+      const createSQL = transformAndDiscoverSchema(b, opts, theSchema)
 
-      // insert the changes into the database
-      await sqldb.insertBulk(opts.database, theSchema, b)
+      // perform database operation
+      await sqldb.insertBulk(opts, createSQL, opts.database, theSchema, b)
 
       // write a checkpoint
       const latestSeq = b[b.length - 1].seq
@@ -101,12 +132,14 @@ const stop = () => {
 // start spooling and monitoring the changes feed
 const start = async (opts) => {
   // override defaults
+  const theSchema = {}
   let defaults = {
     url: 'http://localhost:5984',
     since: '0',
     verbose: false,
     reset: false,
-    transform: null
+    transform: null,
+    split: null
   }
   opts = Object.assign(defaults, opts)
 
@@ -126,27 +159,9 @@ const start = async (opts) => {
   const info = await nano.request(req)
   maxChange = extractSequenceNumber(info.last_seq)
 
-  // get 50 documents from the database for schema discovery
-  debug('Getting docs for schema discovery')
-  const db = nano.db.use(opts.database)
-  const exampleDocs = await db.list({ limit: 50, include_docs: true })
-  if (typeof opts.transform === 'function') {
-    for (var i in exampleDocs.rows) {
-      exampleDocs.rows[i].doc = opts.transform.apply(null, [exampleDocs.rows[i].doc])
-    }
-  }
-
-  // calculate the schema from the example docs
-  debug('Calculating the schema')
-  const theSchema = schema.discover(exampleDocs.rows)
-  if (!theSchema) {
-    throw new Error('Unable to infer the schema on database ' + opts.database)
-  }
-  debug('schema', JSON.stringify(theSchema))
-
-  // setup the local database
-  debug('Setting up the local database')
-  await sqldb.setup(opts.database, theSchema, opts.reset)
+  // initialse SQLite
+  debug('Initalise SQLite')
+  await sqldb.initialise(opts.reset)
 
   // seeing where we got to last time
   if (!opts.reset) {

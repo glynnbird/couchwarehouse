@@ -23,12 +23,7 @@ describe('schema', () => {
         'increased'
       ]
     }
-    const docs = []
-    docs.push({ _id: '_design/doc', doc: { _id: '_design/doc' } })
-    for (let i = 0; i < 49; i++) {
-      docs.push({ _id: doc._id, doc: doc })
-    }
-    const s = schema.discover(docs)
+    const s = schema.discover(doc)
 
     const idealSchema = { name: 'string',
       age: 'number',

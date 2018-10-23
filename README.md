@@ -72,6 +72,7 @@ SQLite has an [extensive query language](https://www.sqlite.org/lang.html) inclu
 - `--verbose` - whether to show progress on the terminal (default: true)
 - `--reset`/`-r` - reset the data. Delete existing data and start from scratch (default: false)
 - `--transform`/`-t` - transform each document with a supplied JavaScript function (default: null)
+- `--split`/`-s` - split a database into multiple tables on this field (default: null)
 - `--version` - show version number
 - `--help` - show help
 
@@ -114,7 +115,25 @@ module.exports = f
 Then instruct *couchwarehouse* to use the function:
 
 ```sh
-couchwarehouse --db mydb --transform './transform.js' --reset true
+couchwarehouse --db mydb --transform './transform.js' 
+```
+
+## Splitting one CouchDB database into multiple tables
+
+A common CouchDB design pattern is to use a top-level field in the the JSON document to identify the "type" of the document (e.g. `type: "person"` or `type: "order"`) and two have multiple document "types" in the same CouchDB database. If that's the case, you'll need the `--split`/`-s` option which allows you to specify the field you are using - *couchwarehouse* will create a new table for each type e.g. `mydb_person`, `mydb_order`.
+
+```sh
+# instruct couchwarehouse to split on the 'type' field
+couchwarehouse --db mydb --split type
+```
+
+Once the data is imported, you can then use JOIN syntax to query across tables e.g.
+
+```sql
+SELECT * FROM mydb_order 
+  LEFT JOIN join mydb_user 
+  ON mydb_order.customerId = mixed_user.id 
+  LIMIT 10
 ```
 
 ## Schema discovery
@@ -189,7 +208,10 @@ from your file system.
 - conflicted document bodies are ignored
 - objects are flattened
 - arrays are stored as their JSON representation
-- this approach is only suitable where each document in the database has the same schema. If you are storing different object types in the same database (e.g. `type: "Person", type: "Order"`), then consider using [Filtered Replication](http://docs.couchdb.org/en/stable/replication/intro.html) to separte the objects into their own database before using this tool
+- your data needs to be consistent. The SQL schema is created from the first document of that type
+that *couchwarehouse* sees. If you have documents of the same type whose schema varies slightly across
+the database, then this may not work. You can, however, use a "transform" function to fill in missing fields
+and tidy up the data a bit.
 
 ## Using programmatically
 
