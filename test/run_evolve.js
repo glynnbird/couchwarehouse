@@ -10,21 +10,13 @@ const wait = (ms) => {
     setTimeout(resolve, ms)
   })
 }
-describe('couchwarehouse split mode', () => {
+describe('couchwarehouse evolving schema', () => {
   // remove database
   before((done) => {
     // delete the sampledata sqlite database
     db = new sqlite3.Database('couchwarehouse.sqlite')
     db.serialize(() => {
-      let sql = 'DROP TABLE IF EXISTS sampledata_product'
-      db.run(sql, err => {
-        assert.strictEqual(err, null)
-      })
-      sql = 'DROP TABLE IF EXISTS sampledata_user'
-      db.run(sql, err => {
-        assert.strictEqual(err, null)
-      })
-      sql = 'DROP TABLE IF EXISTS sampledata_order'
+      let sql = 'DROP TABLE IF EXISTS sampledata'
       db.run(sql, err => {
         assert.strictEqual(err, null)
       })
@@ -41,23 +33,23 @@ describe('couchwarehouse split mode', () => {
     // create mocks
     const n = nock('http://localhost:5984')
     n.get('/sampledata/_changes?since=now&limit=1')
-      .reply(200, { results: [], last_seq: '230-g1AAAA', pending: 0 })
+      .reply(200, { results: [], last_seq: '30-g1AAAA', pending: 0 })
       .get('/sampledata/_changes')
       .query({ include_docs: true, since: '0' })
-      .replyWithFile(200, path.join(__dirname, 'samplechanges2.txt'), { 'Content-Type': 'application/json' })
+      .replyWithFile(200, path.join(__dirname, 'samplechanges3.txt'), { 'Content-Type': 'application/json' })
       .get('/sampledata/_changes')
       .query({
         feed: 'longpoll',
         timeout: 60000,
         include_docs: true,
         limit: 100,
-        since: '230-g1AAAAfLeJy91c1NwzAYBuAIkED8qOXEEa4gpcSuE8cnugFsAPFnW1XVNoi2Z9gANoANYAPYADaADWCD4j_J9NYguRdHipT3kfz6c4ZJkrT76yI5FhzqG9kTHHX4KAVIZ5N0Us-m_RShDgzrmajG085YTof6k7Uq4a35fD7or1c7I_1ikyEBWYGbBC2ybBmWt_XKD73csjIhVFCCmmQtyvlS8pGRT728ZeW8ZByVvEmWkU_CDuGl6MzQZ57etzQAQxh3G4X9o2beM_S5pw9c04ooWkHspi-MfOnlXStjJgBBGbvpKyPXXm5buUvLnDEZvelrQ996es_SmRIFklXspscbek3u9EPr94HnGCvIZOS2nf7g9MdwzKsup1zEnm2nPzn92ejbVleUEn2lxW7d8S-Ofw1bLwnLoYo-445_c_x7mHOpBFEFWknzH07_DLc6ypGUClbS_JfTv8PfTCKAvIDVNP_j-D8zT1VOeJY1Chz8At5pfQE'
+        since: '30-g1AAAAdreJy91M1NwzAYBmBDKyFOdAO4gpRiO05in-gGsAHY_hyVqk0Qbc6wAWwAG8AGsAFsABvABsWuI9JwairSSyLl533kvJ8zRgj1hh1Ah6B0fm0GoGhfTQKtg2IaTPNiNgwI6etxXoDMZv3MzMb2lW2J1N58Ph8NO3J7Yi_sRBq4VLpJkGOPfp-2N1dwVc8e1X5Jby1oJjGIRDcKqy-Zr0QfOPq4pDsLmgthIE2aZNVltpKMnXxSyt2FbHgCIHCTrDVqVgMnn5Yy8rJOwxAiQLtFBia9zAys1eSZiz6vDZFMMTUibL3JC0fnNdowJWPF2m7yysk3NZljwwhru8msa4_o1p4sfldNsAiF0Spue996_t7zD9XeJRLikNK2G_f8o-efqllOI240xH9nuWGrPv3Zp79U3zYhVGOgG2n21etvS39kkDQheDPNvnv-o1o8U4rg9vey5z89_1U1SyMjccL-pdlvn760Z1koScwbNTv6ATneWpY'
       })
       .delay(1000)
       .reply(500)
 
     // go warehouse
-    const opts = { database: 'sampledata', since: '0', url: 'http://localhost:5984', split: 'type' }
+    const opts = { database: 'sampledata', since: '0', url: 'http://localhost:5984' }
     await couchwarehouse.start(opts)
     couchwarehouse.stop()
     await wait(1200)
@@ -65,25 +57,16 @@ describe('couchwarehouse split mode', () => {
   })
 
   it('should save and retrieve products', (done) => {
-    let select = 'SELECT COUNT(*) as x FROM sampledata_product'
+    let select = 'SELECT COUNT(*) as x FROM sampledata'
     db.all(select, [], (err, data) => {
       assert.strictEqual(err, null)
-      assert.strictEqual(data[0]['x'], 20)
+      assert.strictEqual(data[0]['x'], 30)
       done()
     })
   })
 
-  it('should save and retrieve orders', (done) => {
-    let select = 'SELECT COUNT(*) as x FROM sampledata_order'
-    db.all(select, [], (err, data) => {
-      assert.strictEqual(err, null)
-      assert.strictEqual(data[0]['x'], 200)
-      done()
-    })
-  })
-
-  it('should save and retrieve users', (done) => {
-    let select = 'SELECT COUNT(*) as x FROM sampledata_user'
+  it('should put nulls in missing fields', (done) => {
+    let select = 'SELECT COUNT(*) as x FROM sampledata WHERE dispatchCourierRef IS NULL'
     db.all(select, [], (err, data) => {
       assert.strictEqual(err, null)
       assert.strictEqual(data[0]['x'], 10)
@@ -94,15 +77,7 @@ describe('couchwarehouse split mode', () => {
   after((done) => {
     // delete the sampledata sqlite database
     db.serialize(() => {
-      let sql = 'DROP TABLE IF EXISTS sampledata_product'
-      db.run(sql, err => {
-        assert.strictEqual(err, null)
-      })
-      sql = 'DROP TABLE IF EXISTS sampledata_user'
-      db.run(sql, err => {
-        assert.strictEqual(err, null)
-      })
-      sql = 'DROP TABLE IF EXISTS sampledata_order'
+      let sql = 'DROP TABLE IF EXISTS sampledata'
       db.run(sql, err => {
         assert.strictEqual(err, null)
       })

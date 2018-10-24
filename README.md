@@ -208,10 +208,11 @@ from your file system.
 - conflicted document bodies are ignored
 - objects are flattened
 - arrays are stored as their JSON representation
-- your data needs to be consistent. The SQL schema is created from the first document of that type
+- your data needs to be relativelyconsistent. The SQL schema is created from the first document of that type
 that *couchwarehouse* sees. If you have documents of the same type whose schema varies slightly across
 the database, then this may not work. You can, however, use a "transform" function to fill in missing fields
-and tidy up the data a bit.
+and tidy up the data a bit. As of version 1.3, there won't be errors from changes in schema, but couchwarehouse doesn't 
+magically migrate your schema as it changes over time.
 
 ## Using programmatically
 
