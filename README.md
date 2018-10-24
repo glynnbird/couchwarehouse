@@ -122,12 +122,17 @@ couchwarehouse --db mydb --transform './transform.js'
 
 A common CouchDB design pattern is to use a top-level field in the the JSON document to identify the "type" of the document (e.g. `type: "person"` or `type: "order"`) and two have multiple document "types" in the same CouchDB database. If that's the case, you'll need the `--split`/`-s` option which allows you to specify the field you are using - *couchwarehouse* will create a new table for each type e.g. `mydb_person`, `mydb_order`.
 
+![](img/couchwarehouse_split.png)
+
+
+Simply specify the top-level field name used to differentiate your document types with the `--split`/`-s` parameter:
+
 ```sh
 # instruct couchwarehouse to split on the 'type' field
 couchwarehouse --db mydb --split type
 ```
 
-Once the data is imported, you can then use JOIN syntax to query across tables e.g.
+Once the data is imported, you can then query the tables separately or use JOIN syntax to query across tables e.g.
 
 ```sql
 SELECT * FROM mydb_order 
