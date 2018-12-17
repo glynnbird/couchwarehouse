@@ -2,3 +2,4 @@
 node_modules
 *.sqlite
 .open
+start_postgresql.sh

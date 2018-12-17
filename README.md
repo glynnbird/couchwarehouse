@@ -3,8 +3,8 @@
 *couchwarehouse* is a command-line tool that turns your [Apache CouchDB](http://couchdb.apache.org/) database(s) into a local data warehouse. It works by:
 
 - discovering the "schema" of your CouchDB database.
-- creating a new local [SQLite](https://www.sqlite.org/index.html) table to match the schema.
-- downloading all the documents (except design documents) and inserting one row per document into SQLite.
+- creating a new local [SQLite](https://www.sqlite.org/index.html) or [PostgreSQL](https://www.postgresql.org/) table to match the schema.
+- downloading all the documents (except design documents) and inserting one row per document into the SQL database.
 - continuously monitoring CouchDB for new documents, updates to existing documents and deletions.
 
 ![](img/couchwarehouse.png)
@@ -65,10 +65,40 @@ Patos                   -7.02444    -37.28      BR          92575.0
 
 SQLite has an [extensive query language](https://www.sqlite.org/lang.html) including aggregations, joins and much more. You may create warehouses from multiple CouchDB databases to create multiple SQLite tables and join them with queries!
 
+## Using with PostgreSQL
+
+The PostgreSQL connection details are gleaned from [environment variables](https://www.postgresql.org/docs/9.3/libpq-envars.html). If you're [running PostgreSQL locally](https://www.postgresql.org/docs/11/tutorial-install.html) without password protection, you need only worry about the `PGDATABASE` environment variable which defines the name of the database the `couchwarehouse` tables will be created. If left undefined, a database matching your current username will be assumed (e.g. `glynnb`). I had to create this database first:
+
+```sh
+$ createdb glynnb
+```
+
+before running `couchwarehouse` specifyinhg the `--databaseType` parameter:
+
+```
+$ couchwarehouse --url https://U:P@host.cloudant.com --db mydb --databaseType postgresql
+```
+
+You may then run `psql` locally to query your data:
+
+```
+$ psql
+glynnb=# select * from cities limit 5;
+    name    | latitude | longitude | country | population |         timezone          |   id    |                rev                 
+------------+----------+-----------+---------+------------+---------------------------+---------+------------------------------------
+ Fatikchari |  22.6877 |   91.7812 | BD      |      33200 | Asia/Dhaka                | 6414184 | 1-b463b22510476d1f5a9286654eab306b
+ Pilar      | -9.59722 |  -35.9567 | BR      |      30617 | America/Maceio            | 3392126 | 1-249183b8148fa14c2b203d101dbe19be
+ Jaguaruana | -4.83389 |  -37.7811 | BR      |      21790 | America/Fortaleza         | 3397665 | 1-93783cc6d4a421f65cc6238275640803
+ Patos      | -7.02444 |    -37.28 | BR      |      92575 | America/Fortaleza         | 3392887 | 1-629bf77b67fa9173670008dabceb178f
+ Pirané     | -25.7324 |  -59.1088 | AR      |      19124 | America/Argentina/Cordoba | 3429949 | 1-19b66e5364fb1292823e4f9a6c53571d
+(5 rows)
+```
+
 ## Command-line parameter reference
 
 - `--url`/`-u` - the URL of the CouchDB instance e.g. `http://localhost:5984`
 - `--database`/`--db`/`-d` - the name of the CouchDB database to work with
+= `--databaseType`/`-dt` - the type of database - `sqlite` or z`postgresql` (default: sqlite)
 - `--verbose` - whether to show progress on the terminal (default: true)
 - `--reset`/`-r` - reset the data. Delete existing data and start from scratch (default: false)
 - `--transform`/`-t` - transform each document with a supplied JavaScript function (default: null)

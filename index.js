@@ -1,11 +1,23 @@
 const path = require('path')
 const ChangesReader = require('changesreader')
 const schema = require('./lib/schema.js')
-const sqldb = require('./lib/db.js')
 const ProgressBar = require('progress')
 const debug = require('debug')('couchwarehouse')
 let nano
 let cr
+let sqldb
+
+// load the database driver code depending on databaseType
+const loadDatabaseDriver = (opts) => {
+  switch (opts.databaseType) {
+    case 'postgresql':
+      sqldb = require('./lib/postgresql.js')
+      break
+    case 'sqlite':
+    default:
+      sqldb = require('./lib/sqlite.js')
+  }
+}
 
 // extract the sequence number from a token e.g 47-1abc2 --> 47
 const extractSequenceNumber = (seq) => {
@@ -65,7 +77,20 @@ const spoolChanges = async (opts, theSchema, maxChange) => {
   return new Promise((resolve, reject) => {
     // start spooling changes
     const changesReader = new ChangesReader(opts.database, nano.request)
-    changesReader.spool({ since: opts.since, includeDocs: true }).on('batch', async (b) => {
+    let func
+    const params = { since: opts.since, includeDocs: true }
+
+    // if we're in slow mode we use changesReader.get to iteratively
+    // poll the changes feed in batches
+    if (opts.slow) {
+      func = changesReader.get
+      params.wait = true
+    } else {
+      // in fast mode we can spool the changes feed in one long poll
+      // knowing that our database can keep up
+      func = changesReader.spool
+    }
+    func.apply(changesReader, [params]).on('batch', async (b, done) => {
       if (b.length > 0) {
         // get latest sequence token
         lastSeq = b[b.length - 1].seq
@@ -79,6 +104,11 @@ const spoolChanges = async (opts, theSchema, maxChange) => {
         // update the progress bar
         if (opts.verbose) {
           bar.tick(b.length)
+        }
+
+        // call the done callback if provided
+        if (typeof done === 'function') {
+          done()
         }
       }
     }).on('end', async () => {
@@ -102,7 +132,7 @@ const monitorChanges = async function (opts, theSchema, lastSeq) {
   return new Promise((resolve, reject) => {
     // start monitoring the changes fees
     cr = new ChangesReader(opts.database, nano.request)
-    cr.start({ since: lastSeq, includeDocs: true }).on('batch', async (b) => {
+    cr.start({ since: lastSeq, includeDocs: true }).on('batch', async (b, done) => {
       if (opts.verbose) {
         process.stdout.write('.')
       }
@@ -116,6 +146,11 @@ const monitorChanges = async function (opts, theSchema, lastSeq) {
       // write a checkpoint
       const latestSeq = b[b.length - 1].seq
       await sqldb.writeCheckpoint(opts.database, latestSeq)
+
+      // call the done callback if provided
+      if (typeof done === 'function') {
+        done()
+      }
     }).on('error', reject)
     resolve()
   })
@@ -139,7 +174,9 @@ const start = async (opts) => {
     verbose: false,
     reset: false,
     transform: null,
-    split: null
+    split: null,
+    slow: false,
+    databaseType: 'sqlite'
   }
   opts = Object.assign(defaults, opts)
 
@@ -159,8 +196,12 @@ const start = async (opts) => {
   const info = await nano.request(req)
   maxChange = extractSequenceNumber(info.last_seq)
 
-  // initialse SQLite
-  debug('Initalise SQLite')
+  // initialse database
+  if (opts.databaseType !== 'sqlite') {
+    opts.slow = true
+  }
+  debug('Initalise database')
+  loadDatabaseDriver(opts)
   await sqldb.initialise(opts.reset)
 
   // seeing where we got to last time
