@@ -6,6 +6,7 @@ const db = process.env.COUCH_DATABASE
 const args = require('yargs')
   .option('url', { alias: 'u', describe: 'CouchDB URL', default: url })
   .option('database', { alias: ['db', 'd'], describe: 'CouchDB database name', demandOption: !db, default: db })
+  .option('databaseType', { alias: ['dt'], describe: 'SQL database type', default: 'sqlite' })
   .option('verbose', { describe: 'Show instructions and progress in the output', default: true })
   .option('reset', { alias: 'r', describe: 'Ignore previously downloaded data and start again', default: false })
   .option('transform', { alias: 't', describe: 'Path to a JavaScript transformation function', default: process.env.COUCH_TRANSFORM ? process.env.COUCH_TRANSFORM : null })
