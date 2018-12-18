@@ -3,3 +3,4 @@ img
 *.sqlite
 .open
 .travis.yml
+*.sh
