@@ -25,6 +25,7 @@
   "dependencies": {
     "changesreader": "^1.1.3",
     "debug": "^4.1.0",
+    "mysql": "^2.16.0",
     "nano": "^7.1.1",
     "pg": "^7.7.1",
     "progress": "^2.0.3",

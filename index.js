@@ -13,6 +13,9 @@ const loadDatabaseDriver = (opts) => {
     case 'postgresql':
       sqldb = require('./lib/postgresql.js')
       break
+    case 'mysql':
+      sqldb = require('./lib/mysql.js')
+      break
     case 'sqlite':
     default:
       sqldb = require('./lib/sqlite.js')

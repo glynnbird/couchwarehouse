@@ -3,7 +3,7 @@
 *couchwarehouse* is a command-line tool that turns your [Apache CouchDB](http://couchdb.apache.org/) database(s) into a local data warehouse. It works by:
 
 - discovering the "schema" of your CouchDB database.
-- creating a new local [SQLite](https://www.sqlite.org/index.html) or [PostgreSQL](https://www.postgresql.org/) table to match the schema.
+- creating a new [SQLite](https://www.sqlite.org/index.html), [PostgreSQL](https://www.postgresql.org/) or [MySQL](https://www.mysql.com/) table to match the schema.
 - downloading all the documents (except design documents) and inserting one row per document into the SQL database.
 - continuously monitoring CouchDB for new documents, updates to existing documents and deletions.
 
@@ -19,7 +19,7 @@ Once downloaded your database can be queried using SQL.
 npm install -g couchwarehouse
 ```
 
-## Running
+## Usage
 
 By default, your CouchDB installation is expected to be on "http://localhost:5984". Override this with the `--url`/`-u` parameter and specify the database name with `--database`/`-db`:
 
@@ -65,7 +65,7 @@ Patos                   -7.02444    -37.28      BR          92575.0
 
 SQLite has an [extensive query language](https://www.sqlite.org/lang.html) including aggregations, joins and much more. You may create warehouses from multiple CouchDB databases to create multiple SQLite tables and join them with queries!
 
-## Using with PostgreSQL
+## Using with PostgreSQL instead of SQLite
 
 The PostgreSQL connection details are gleaned from [environment variables](https://www.postgresql.org/docs/9.3/libpq-envars.html). If you're [running PostgreSQL locally](https://www.postgresql.org/docs/11/tutorial-install.html) without password protection, you need only worry about the `PGDATABASE` environment variable which defines the name of the database the `couchwarehouse` tables will be created. If left undefined, a database matching your current username will be assumed (e.g. `glynnb`). I had to create this database first:
 
@@ -83,7 +83,7 @@ You may then run `psql` locally to query your data:
 
 ```
 $ psql
-glynnb=# select * from cities limit 5;
+glynnb=# select * from mydb limit 5;
     name    | latitude | longitude | country | population |         timezone          |   id    |                rev                 
 ------------+----------+-----------+---------+------------+---------------------------+---------+------------------------------------
  Fatikchari |  22.6877 |   91.7812 | BD      |      33200 | Asia/Dhaka                | 6414184 | 1-b463b22510476d1f5a9286654eab306b
@@ -92,6 +92,39 @@ glynnb=# select * from cities limit 5;
  Patos      | -7.02444 |    -37.28 | BR      |      92575 | America/Fortaleza         | 3392887 | 1-629bf77b67fa9173670008dabceb178f
  Pirané     | -25.7324 |  -59.1088 | AR      |      19124 | America/Argentina/Cordoba | 3429949 | 1-19b66e5364fb1292823e4f9a6c53571d
 (5 rows)
+```
+
+## Using with MySQL instead of SQLite
+
+The MySQL connection string is taken from the `MYSQLCONFIG` environment variable, or if absent `mysql://root:@localhost:3306/couchwarehouse` is used. connection details are gleaned from [environment variables]. You will need to create the `couchwarehouse` database first:
+
+```
+$ mysql -u root
+mysql> CREATE DATABASE couchwarehouse;
+Query OK, 1 row affected (0.00 sec)
+```
+
+before running `couchwarehouse` specifyinhg the `--databaseType` parameter:
+
+```sh
+$ couchwarehouse --url https://U:P@host.cloudant.com --db mydb --databaseType mysql
+```
+
+You can then access your datawarehouse from the mysql console:
+
+```
+$ mysql -u root
+mysql> select * from mydb limit 5;
++---------------+----------+-----------+---------+------------+---------------------+---------+------------------------------------+
+| name          | latitude | longitude | country | population | timezone            | id      | rev                                |
++---------------+----------+-----------+---------+------------+---------------------+---------+------------------------------------+
+| Grahamstown   | -33.3042 |   26.5328 | ZA      |      91548 | Africa/Johannesburg | 1000501 | 1-d8d38173981fe25cc8592b14c34aa262 |
+| Graaff-Reinet | -32.2522 |   24.5308 | ZA      |      62896 | Africa/Johannesburg | 1000543 | 1-3256046064953e2f0fdb376211fe78ab |
+| Abū Ghurayb   |  33.3056 |   44.1848 | IQ      |     900000 | Asia/Baghdad        | 100077  | 1-101bff1251d4bd75beb6d3c232d05a5c |
+| Giyani        | -23.3025 |   30.7187 | ZA      |      37024 | Africa/Johannesburg | 1001860 | 1-cb3cd8dd58cef68b9e2cebc66eedcc10 |
+| Ga-Rankuwa    | -25.6169 |   27.9947 | ZA      |      68767 | Africa/Johannesburg | 1002851 | 1-685b969148a5534b9cd85689996c52f0 |
++---------------+----------+-----------+---------+------------+---------------------+---------+------------------------------------+
+5 rows in set (0.00 sec)
 ```
 
 ## Command-line parameter reference
