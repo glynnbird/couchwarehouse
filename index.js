@@ -216,12 +216,7 @@ const start = async (opts) => {
   // spool changes
   debug('Spooling changes')
   if (opts.verbose) {
-    console.log('Run the following command to query your data warehouse:')
-    console.log('\n  $ sqlite3 couchwarehouse.sqlite\n')
-    console.log('Then in sqlite3, you can run queries e.g.:')
-    console.log('\n  sqlite3> SELECT * FROM ' + opts.database + ' LIMIT 10;\n')
-    console.log('Have fun!')
-    console.log('p.s Press ctrl-C to stop monitoring for further changes')
+    sqldb.message(opts)
   }
   const lastSeq = await spoolChanges(opts, theSchema, maxChange)
 
