@@ -3,6 +3,7 @@ const ChangesReader = require('changesreader')
 const schema = require('./lib/schema.js')
 const ProgressBar = require('progress')
 const debug = require('debug')('couchwarehouse')
+const util = require('./lib/util.js')
 let nano
 let cr
 let sqldb
@@ -216,6 +217,8 @@ const start = async (opts) => {
   // spool changes
   debug('Spooling changes')
   if (opts.verbose) {
+    opts.usableDbName = util.calculateUsableDbName(opts, opts.database, null)
+    console.log(opts.database, opts.usableDbName)
     sqldb.message(opts)
   }
   const lastSeq = await spoolChanges(opts, theSchema, maxChange)
