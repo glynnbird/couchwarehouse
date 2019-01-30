@@ -65,6 +65,8 @@ Patos                   -7.02444    -37.28      BR          92575.0
 
 SQLite has an [extensive query language](https://www.sqlite.org/lang.html) including aggregations, joins and much more. You may create warehouses from multiple CouchDB databases to create multiple SQLite tables and join them with queries!
 
+N.B if your database name has a `-` character in it, it will be removed from the subsequent SQL table e.g "month-54" becomes "month54".
+
 ## Using with PostgreSQL instead of SQLite
 
 The PostgreSQL connection details are gleaned from [environment variables](https://www.postgresql.org/docs/9.3/libpq-envars.html). If you're [running PostgreSQL locally](https://www.postgresql.org/docs/11/tutorial-install.html) without password protection, you need only worry about the `PGDATABASE` environment variable which defines the name of the database the `couchwarehouse` tables will be created. If left undefined, a database matching your current username will be assumed (e.g. `glynnb`). I had to create this database first:
