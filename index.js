@@ -17,6 +17,9 @@ const loadDatabaseDriver = (opts) => {
     case 'mysql':
       sqldb = require('./lib/mysql.js')
       break
+    case 'elasticsearch':
+      sqldb = require('./lib/elasticsearch.js')
+      break
     case 'sqlite':
     default:
       sqldb = require('./lib/sqlite.js')
@@ -109,6 +112,9 @@ const spoolChanges = async (opts, theSchema, maxChange) => {
         if (opts.verbose) {
           bar.tick(b.length)
         }
+
+        // write checkpoint
+        await sqldb.writeCheckpoint(opts.database, lastSeq)
 
         // call the done callback if provided
         if (typeof done === 'function') {
@@ -218,7 +224,6 @@ const start = async (opts) => {
   debug('Spooling changes')
   if (opts.verbose) {
     opts.usableDbName = util.calculateUsableDbName(opts, opts.database, null)
-    console.log(opts.database, opts.usableDbName)
     sqldb.message(opts)
   }
   const lastSeq = await spoolChanges(opts, theSchema, maxChange)

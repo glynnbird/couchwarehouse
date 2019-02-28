@@ -1,15 +1,17 @@
 # couchwarehouse
 
-*couchwarehouse* is a command-line tool that turns your [Apache CouchDB](http://couchdb.apache.org/) database(s) into a local data warehouse. It works by:
+*couchwarehouse* is a command-line tool that turns your [Apache CouchDB](http://couchdb.apache.org/) database(s) into a local data warehouse. The target database can be either be [SQLite](https://www.sqlite.org/index.html), [PostgreSQL](https://www.postgresql.org/), [MySQL](https://www.mysql.com/) or [Elasticsearch](https://www.elastic.co/products/elasticsearch).
 
-- discovering the "schema" of your CouchDB database.
-- creating a new [SQLite](https://www.sqlite.org/index.html), [PostgreSQL](https://www.postgresql.org/) or [MySQL](https://www.mysql.com/) table to match the schema.
-- downloading all the documents (except design documents) and inserting one row per document into the SQL database.
+It works by:
+
+- discovering the "schema" of your CouchDB database (for the relational databases).
+- creating a new [SQLite](https://www.sqlite.org/index.html), [PostgreSQL](https://www.postgresql.org/) or [MySQL](https://www.mysql.com/) table to match the schema, or in the case of Elasticsearch simply moving the JSON over.
+- downloading all the documents (except design documents) and inserting one row per document into the target database.
 - continuously monitoring CouchDB for new documents, updates to existing documents and deletions.
 
 ![](img/couchwarehouse.png)
 
-Once downloaded your database can be queried using SQL.
+Once downloaded your database can be queried using SQL or the target database's API.
 
 ## Installation
 
@@ -19,7 +21,7 @@ Once downloaded your database can be queried using SQL.
 npm install -g couchwarehouse
 ```
 
-## Usage
+## Usage with SQLite
 
 By default, your CouchDB installation is expected to be on "http://localhost:5984". Override this with the `--url`/`-u` parameter and specify the database name with `--database`/`-db`:
 
@@ -42,7 +44,7 @@ After downloading is complete, *couchwarehouse* will continuously poll the sourc
 
 Press "Ctrl-C" to exit.
 
-## Accessing the data warehouse
+## Accessing the SQLite data warehouse
 
 In another terminal, simply run the `sqlite3` command-line tool (which may be pre-installed on your computer, otherwise [download here](https://www.sqlite.org/download.html)).
 
@@ -67,7 +69,7 @@ SQLite has an [extensive query language](https://www.sqlite.org/lang.html) inclu
 
 N.B if your database name has a `-` character in it, it will be removed from the subsequent SQL table e.g "month-54" becomes "month54".
 
-## Using with PostgreSQL instead of SQLite
+## Using with PostgreSQL as the target database
 
 The PostgreSQL connection details are gleaned from [environment variables](https://www.postgresql.org/docs/9.3/libpq-envars.html). If you're [running PostgreSQL locally](https://www.postgresql.org/docs/11/tutorial-install.html) without password protection, you need only worry about the `PGDATABASE` environment variable which defines the name of the database the `couchwarehouse` tables will be created. If left undefined, a database matching your current username will be assumed (e.g. `glynnb`). I had to create this database first:
 
@@ -96,7 +98,7 @@ glynnb=# select * from mydb limit 5;
 (5 rows)
 ```
 
-## Using with MySQL instead of SQLite
+## Using with MySQL as the target database
 
 The MySQL connection string is taken from the `MYSQLCONFIG` environment variable, or if absent `mysql://root:@localhost:3306/couchwarehouse` is used. connection details are gleaned from [environment variables]. You will need to create the `couchwarehouse` database first:
 
@@ -129,11 +131,28 @@ mysql> select * from mydb limit 5;
 5 rows in set (0.00 sec)
 ```
 
+## Using with Elasticsearch as the target database
+
+The MySQL connection string is taken from the `ESCONFIG` environment variable, or if absent `http://localhost:9200` is used. 
+
+Run `couchwarehouse` specifyinhg the `--databaseType` parameter:
+
+```sh
+$ couchwarehouse --url https://U:P@host.cloudant.com --db mydb --databaseType elasticsearch
+```
+
+You can then access your datawarehouse using the Elasticsearch API:
+
+```
+$  curl 'http://localhost:9200/couchwarehouse/_search?q=name:"York"' 
+{"took":3,"timed_out":false,"_shards":{"total":5,"successful":5,"skipped":0,"failed":0},"hits":{"total":6,"max_score":7.998925,"hits":[{"_index":"couchwarehouse","_type":"default","_id":"4562407","_score":7.998925,"_source":{"name":"York","latitude":39.9626,"longitude":-76.72774,"country":"US","population":43718,"timezone":"America/New_York"}},{"_index":"couchwarehouse","_type":"default","_id":"2633352","_score":7.998925,"_source":{"name":"York","latitude":53.95763,"longitude":-1.08271,"country":"GB","population":144202,"timezone":"Europe/London"}},{"_index":"couchwarehouse","_type":"default","_id":"6091104","_score":5.9267497,"_source":{"name":"North York","latitude":43.76681,"longitude":-79.4163,"country":"CA","population":636000,"timezone":"America/Toronto"}},{"_index":"couchwarehouse","_type":"default","_id":"7870925","_score":5.9267497,"_source":{"name":"East York","latitude":43.69053,"longitude":-79.32794,"country":"CA","population":115365,"timezone":"America/Toronto"}},{"_index":"couchwarehouse","_type":"default","_id":"5128581","_score":5.283532,"_source":{"name":"New York City","latitude":40.71427,"longitude":-74.00597,"country":"US","population":8175133,"timezone":"America/New_York"}},{"_index":"couchwarehouse","_type":"default","_id":"5106292","_score":4.734778,"_source":{"name":"West New York","latitude":40.78788,"longitude":-74.01431,"country":"US","population":49708,"timezone":"America/New_York"}}]}
+```
+
 ## Command-line parameter reference
 
 - `--url`/`-u` - the URL of the CouchDB instance e.g. `http://localhost:5984`
 - `--database`/`--db`/`-d` - the name of the CouchDB database to work with
-= `--databaseType`/`-dt` - the type of database - `sqlite` or z`postgresql` (default: sqlite)
+= `--databaseType`/`-dt` - the type of database - `sqlite`, `mysql`,`postgresql` or `elasticsearch` (default: sqlite)
 - `--verbose` - whether to show progress on the terminal (default: true)
 - `--reset`/`-r` - reset the data. Delete existing data and start from scratch (default: false)
 - `--transform`/`-t` - transform each document with a supplied JavaScript function (default: null)
