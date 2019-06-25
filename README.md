@@ -334,6 +334,7 @@ The `opts` object passed to `couchwarehouse.start` can contain:
 - `database` - the name of the CouchDB database to work with
 - `verbose` - whether to show progress on the terminal (default: true)
 - `reset` - reset the data. Delete existing data and start from scratch (default: false)
+- `split` - the attribute to use to split documents into separate tables (default: splitting disabled)
 
 ## Debugging
 
