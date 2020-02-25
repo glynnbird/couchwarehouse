@@ -4,7 +4,7 @@ const schema = require('./lib/schema.js')
 const ProgressBar = require('progress')
 const debug = require('debug')('couchwarehouse')
 const util = require('./lib/util.js')
-let nano
+const axios = require('axios').default
 let cr
 let sqldb
 
@@ -38,7 +38,7 @@ const transformAndDiscoverSchema = (b, opts, theSchema) => {
   let createSQL = []
 
   // for each document in the batch
-  for (let i in b) {
+  for (const i in b) {
     // the document we're working with
     let doc = b[i].doc
 
@@ -83,7 +83,7 @@ const spoolChanges = async (opts, theSchema, maxChange) => {
   // return a Promise
   return new Promise((resolve, reject) => {
     // start spooling changes
-    const changesReader = new ChangesReader(opts.database, nano.request)
+    const changesReader = new ChangesReader(opts.database, opts.url)
     let func
     const params = { since: opts.since, includeDocs: true }
 
@@ -141,7 +141,7 @@ const monitorChanges = async function (opts, theSchema, lastSeq) {
   // return a Promise
   return new Promise((resolve, reject) => {
     // start monitoring the changes fees
-    cr = new ChangesReader(opts.database, nano.request)
+    cr = new ChangesReader(opts.database, opts.url)
     cr.start({ since: lastSeq, includeDocs: true }).on('batch', async (b, done) => {
       if (opts.verbose) {
         process.stdout.write('.')
@@ -178,7 +178,7 @@ const stop = () => {
 const start = async (opts) => {
   // override defaults
   const theSchema = {}
-  let defaults = {
+  const defaults = {
     url: 'http://localhost:5984',
     since: '0',
     verbose: false,
@@ -195,16 +195,20 @@ const start = async (opts) => {
     opts.transform = require(path.resolve(process.cwd(), opts.transform))
   }
 
-  // setup nano
-  nano = require('nano')(opts.url)
-  let maxChange
-
   // get latest revision token of the target database, to
   // give us something to aim for
   debug('Getting last change from CouchDB')
-  const req = { db: opts.database, path: '_changes', qs: { since: 'now', limit: 1 } }
-  const info = await nano.request(req)
-  maxChange = extractSequenceNumber(info.last_seq)
+  const req = {
+    baseURL: opts.url,
+    url: opts.database + '/_changes',
+    params: {
+      since: 'now',
+      limit: 1
+    }
+  }
+  const response = await axios(req)
+  const info = response.data
+  const maxChange = extractSequenceNumber(info.last_seq)
 
   // initialse database
   if (opts.databaseType !== 'sqlite') {
