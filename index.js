@@ -99,8 +99,6 @@ const spoolChanges = async (opts, theSchema, maxChange) => {
     }
     func.apply(changesReader, [params]).on('batch', async (b, done) => {
       if (b.length > 0) {
-        // get latest sequence token
-        lastSeq = b[b.length - 1].seq
 
         // transform and get any new schema SQL statements
         const createSQL = transformAndDiscoverSchema(b, opts, theSchema)
@@ -121,7 +119,8 @@ const spoolChanges = async (opts, theSchema, maxChange) => {
           done()
         }
       }
-    }).on('end', async () => {
+    }).on('end', async (s) => {
+      lastSeq = s
       // complete the progress bar
       if (opts.verbose) {
         bar.tick(bar.total - bar.curr)
