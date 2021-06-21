@@ -46,12 +46,13 @@ const transformAndDiscoverSchema = (b, opts, theSchema) => {
     if (typeof opts.transform === 'function') {
       doc = opts.transform.apply(null, [doc])
     }
+    b[i].doc = doc
 
     // calculate its document type
-    const docType = opts.split ? doc[opts.split] : '_default'
+    const docType = doc && opts.split ? doc[opts.split] : '_default'
 
     // if not a design doc and not a document type we've seen before
-    if (!doc._id.match(/^_design/) && !theSchema[docType]) {
+    if (doc && !doc._id.match(/^_design/) && !theSchema[docType]) {
       // clone the doc
       doc = JSON.parse(JSON.stringify(doc))
 
@@ -99,7 +100,6 @@ const spoolChanges = async (opts, theSchema, maxChange) => {
     }
     func.apply(changesReader, [params]).on('batch', async (b, done) => {
       if (b.length > 0) {
-
         // transform and get any new schema SQL statements
         const createSQL = transformAndDiscoverSchema(b, opts, theSchema)
 

@@ -1,6 +1,6 @@
 {
   "name": "couchwarehouse",
-  "version": "1.6.3",
+  "version": "1.6.4",
   "description": "Data Warehouse PoC for CouchDB",
   "main": "index.js",
   "scripts": {
