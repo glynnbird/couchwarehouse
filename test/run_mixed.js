@@ -30,7 +30,9 @@ describe('couchwarehouse split mode', () => {
       })
       sql = 'DELETE FROM couchwarehouse_checkpoints WHERE tablename="sampledata"'
       db.run(sql, err => {
-        if (err) { }
+        if (err) {
+          // do nothing
+        }
         done()
       })
     })

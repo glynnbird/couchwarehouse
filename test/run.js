@@ -22,7 +22,9 @@ describe('couchwarehouse', () => {
       })
       const sql2 = 'DELETE FROM couchwarehouse_checkpoints WHERE tablename="sampledata"'
       db.run(sql2, err => {
-        if (err) { }
+        if (err) {
+          // do nothing
+        }
         done()
       })
     })
