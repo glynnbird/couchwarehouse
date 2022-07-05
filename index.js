@@ -236,6 +236,6 @@ const start = async (opts) => {
 }
 
 module.exports = {
-  start: start,
-  stop: stop
+  start,
+  stop
 }
