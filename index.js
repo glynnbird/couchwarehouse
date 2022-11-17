@@ -4,7 +4,7 @@ const schema = require('./lib/schema.js')
 const ProgressBar = require('progress')
 const debug = require('debug')('couchwarehouse')
 const util = require('./lib/util.js')
-const axios = require('axios').default
+const axios = require('axios')
 let cr
 let sqldb
 
@@ -205,7 +205,7 @@ const start = async (opts) => {
       limit: 1
     }
   }
-  const response = await axios(req)
+  const response = await axios.request(req)
   const info = response.data
   const maxChange = extractSequenceNumber(info.last_seq)
 
