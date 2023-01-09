@@ -52,7 +52,7 @@ const transformAndDiscoverSchema = (b, opts, theSchema) => {
     const docType = doc && opts.split ? doc[opts.split] : '_default'
 
     // if not a design doc and not a document type we've seen before
-    if (doc && !doc._id.match(/^_design/) && !theSchema[docType]) {
+    if (doc && !doc._id.match(/^_design/) && !theSchema[docType] && typeof doc._deleted === 'undefined') {
       // clone the doc
       doc = JSON.parse(JSON.stringify(doc))
 
