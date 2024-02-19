@@ -98,6 +98,10 @@ const spoolChanges = async (opts, theSchema, maxChange) => {
       // knowing that our database can keep up
       func = changesReader.spool
     }
+    // if we have query, let's add it
+    if (opts.query) {
+      params.selector = opts.query
+    }
     func.apply(changesReader, [params]).on('batch', async (b, done) => {
       if (b.length > 0) {
         // transform and get any new schema SQL statements
@@ -184,6 +188,7 @@ const start = async (opts) => {
     reset: false,
     transform: null,
     split: null,
+    query: null,
     slow: false,
     databaseType: 'sqlite'
   }
@@ -192,6 +197,20 @@ const start = async (opts) => {
   // if transform is present
   if (opts.transform) {
     opts.transform = require(path.resolve(process.cwd(), opts.transform))
+  }
+
+  // if query is present, look for a valid JSON
+  if (opts.query) {
+    try {
+      opts.query = JSON.parse(opts.query)
+    } catch (err) {
+      console.error('ERROR: Invalid JSON on query parameter.')
+      process.exit(1)
+    }
+    if (opts.query.selector) {
+      console.error('ERROR: Do not add attribute "selector" on query parameter.')
+      process.exit(1)
+    }
   }
 
   // get latest revision token of the target database, to
