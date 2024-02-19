@@ -11,6 +11,7 @@ const args = require('yargs')
   .option('reset', { alias: 'r', describe: 'Ignore previously downloaded data and start again', default: false })
   .option('transform', { alias: 't', describe: 'Path to a JavaScript transformation function', default: process.env.COUCH_TRANSFORM ? process.env.COUCH_TRANSFORM : null })
   .option('split', { alias: 's', describe: 'Document field name used to split documents into separate tables', default: null })
+  .option('query', { alias: 'q', describe: 'Use Mango Query to filter data', default: null })
   .help('help')
   .argv
 

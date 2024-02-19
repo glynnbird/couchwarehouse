@@ -4,3 +4,4 @@ node_modules
 .open
 start_postgresql.sh
 start_mysql.sh
+.vscode

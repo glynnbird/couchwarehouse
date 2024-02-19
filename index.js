@@ -184,6 +184,7 @@ const start = async (opts) => {
     reset: false,
     transform: null,
     split: null,
+    query: null,
     slow: false,
     databaseType: 'sqlite'
   }
